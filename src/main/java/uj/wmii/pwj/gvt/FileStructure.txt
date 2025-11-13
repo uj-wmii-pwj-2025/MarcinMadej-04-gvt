@@ -1,0 +1,15 @@
+.gvt/
+ ├── versions/
+ │    ├── 0/
+ │    │    └── message.txt
+ │    ├── 1/
+ │    │    └── file.txt
+ │    │    └── message.txt
+ │    ├── 2/
+ │    │    └── file.txt
+ │    │    └── ...
+ │   ...
+ ├── currentVersion.txt
+ ├── activeVersion.txt
+ └── history.txt
+ └── tracked.txt

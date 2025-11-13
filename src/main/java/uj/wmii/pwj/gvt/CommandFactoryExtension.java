@@ -77,11 +77,11 @@ public class CommandFactoryExtension extends  CommandFactory {
         int activeVersionNum = getActiveVersion(gvtDir);
         int newVersionNum = getLastVersion(gvtDir) + 1;
 
-        File prevVersionDir = new File(versionsDir, String.valueOf(activeVersionNum));
+        File prevVersionDir = new File(versionsDir, String.valueOf(getLastVersion(gvtDir)));
         File newVersionDir = new File(versionsDir, String.valueOf(newVersionNum));
         createDir(newVersionDir);
 
-        for (String trackedFile : trackedFiles) {
+        /*for (String trackedFile : trackedFiles) {
             File workingCopy = new File(currentDir, trackedFile);
             File dest = new File(newVersionDir, trackedFile);
             if (workingCopy.exists()) {
@@ -92,9 +92,10 @@ public class CommandFactoryExtension extends  CommandFactory {
                     Files.copy(oldCopy.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
                 }
             }
-        }
+        }*/
+        filesCopy(prevVersionDir, newVersionDir);
 
-        Files.copy(sourceFile.toPath(), new File(newVersionDir, fileToAdd).toPath(), StandardCopyOption.REPLACE_EXISTING);
+        Files.copy(sourceFile.toPath(), new File(newVersionDir, fileToAdd).toPath());
 
         tracked.addFile(fileToAdd);
 
@@ -122,7 +123,7 @@ public class CommandFactoryExtension extends  CommandFactory {
         Integer activeVersionNum = getActiveVersion(gvtDir);
         Integer newVersionNum = getLastVersion(gvtDir) + 1;
         File newVersionDir = new File(versionsDir, String.valueOf(newVersionNum));
-        File prevVersionDir = new File(versionsDir, String.valueOf(activeVersionNum));
+        File prevVersionDir = new File(versionsDir, String.valueOf(getLastVersion(gvtDir)));
         String fileToBeDetached = args[1];
 
         TrackedFilesManager trackedManager = new TrackedFilesManager(gvtDir.toPath());
@@ -213,25 +214,14 @@ public class CommandFactoryExtension extends  CommandFactory {
 
         Integer activeVersionNum = getActiveVersion(gvtDir);
         Integer newVersionNum = getLastVersion(gvtDir) + 1;
-        File activeVersionDir = new File(versionsDir, String.valueOf(activeVersionNum));
+        File prevVersionDir = new File(versionsDir, String.valueOf(getLastVersion(gvtDir)));
         File newVersionDir = new File(versionsDir, String.valueOf(newVersionNum));
         createDir(newVersionDir);
 
-        Set<String> trackedFiles = tracked.getTrackedFiles();
+        filesCopy(prevVersionDir, newVersionDir);
 
-        for (String trackedFile : trackedFiles) {
-            File workingCopy = new File(currentDir, trackedFile);
-            File dest = new File(newVersionDir, trackedFile);
-
-            if (workingCopy.exists()) {
-                Files.copy(workingCopy.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            } else {
-                File oldCopy = new File(activeVersionDir, trackedFile);
-                if (oldCopy.exists()) {
-                    Files.copy(oldCopy.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                }
-            }
-        }
+        File sourceFile = new File(currentDir, fileToCommit);
+        Files.copy(sourceFile.toPath(), new File(newVersionDir, fileToCommit).toPath(), StandardCopyOption.REPLACE_EXISTING);
 
         updateVersionFiles(newVersionNum, newVersionNum);
         updateHistoryAndAddMessage(newVersionDir, newVersionNum, fileToCommit, "File committed successfully. File: ");
@@ -247,11 +237,6 @@ public class CommandFactoryExtension extends  CommandFactory {
 
         File gvtDir = new File(currentDir, ".gvt");
         File historyFile = new File(gvtDir, "history.txt");
-
-        if (!historyFile.exists()) {
-            exitHandler.exit(0, "No history available.");
-            return;
-        }
 
         List<String> lines = Files.readAllLines(historyFile.toPath());
         int limit = -1;
@@ -304,10 +289,6 @@ public class CommandFactoryExtension extends  CommandFactory {
         }
 
         File messageFile = new File(versionDir, "message.txt");
-        if (!messageFile.exists()) {
-            exitHandler.exit(0, "TAK NIE MOZE BYC");
-            return;
-        }
 
         String message = Files.readString(messageFile.toPath()).trim();
 
@@ -344,24 +325,16 @@ public class CommandFactoryExtension extends  CommandFactory {
     }
 
     private void createDir(File dir) throws IOException {
-        System.err.println("[DEBUG] Trying to create: " + dir.getAbsolutePath());
-        File parent = dir.getParentFile();
-        if (parent != null && !parent.exists()) {
-            System.err.println("[DEBUG] Creating parent dirs: " + parent);
-            parent.mkdirs();
-        }
-        if (!dir.exists() && !dir.mkdirs()) {
+        if (!dir.mkdir()) {
             throw new IOException("Failed to create directory: " + dir.getAbsolutePath());
         }
     }
-
 
     private void deleteFile(File file) throws IOException {
         if (!file.delete()) {
             throw new IOException("Failed to delete file: " + file.getPath());
         }
     }
-
 
     private boolean addMessageAndCheckIfItIsCustom(String[] args, File newVersionDir, Integer newVersionNum, String defaultMessage) throws IOException {
         File message = new File(newVersionDir, "message.txt");

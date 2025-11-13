@@ -67,36 +67,20 @@ public class CommandFactoryExtension extends  CommandFactory {
 
         TrackedFilesManager tracked = new TrackedFilesManager(gvtDir.toPath());
         tracked.initializeIfNeeded();
-        Set<String> trackedFiles = tracked.getTrackedFiles();
 
         if (tracked.isTracked(fileToAdd)) {
             exitHandler.exit(0, "File already added. File: " + fileToAdd);
             return;
         }
 
-        int activeVersionNum = getActiveVersion(gvtDir);
         int newVersionNum = getLastVersion(gvtDir) + 1;
-
         File prevVersionDir = new File(versionsDir, String.valueOf(getLastVersion(gvtDir)));
         File newVersionDir = new File(versionsDir, String.valueOf(newVersionNum));
         createDir(newVersionDir);
 
-        /*for (String trackedFile : trackedFiles) {
-            File workingCopy = new File(currentDir, trackedFile);
-            File dest = new File(newVersionDir, trackedFile);
-            if (workingCopy.exists()) {
-                Files.copy(workingCopy.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            } else {
-                File oldCopy = new File(prevVersionDir, trackedFile);
-                if (oldCopy.exists()) {
-                    Files.copy(oldCopy.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                }
-            }
-        }*/
         filesCopy(prevVersionDir, newVersionDir);
 
         Files.copy(sourceFile.toPath(), new File(newVersionDir, fileToAdd).toPath());
-
         tracked.addFile(fileToAdd);
 
         updateVersionFiles(newVersionNum, newVersionNum);
@@ -120,7 +104,6 @@ public class CommandFactoryExtension extends  CommandFactory {
         File gvtDir = new File(currentDir, ".gvt");
         File versionsDir = new File(gvtDir,"versions");
 
-        Integer activeVersionNum = getActiveVersion(gvtDir);
         Integer newVersionNum = getLastVersion(gvtDir) + 1;
         File newVersionDir = new File(versionsDir, String.valueOf(newVersionNum));
         File prevVersionDir = new File(versionsDir, String.valueOf(getLastVersion(gvtDir)));
@@ -139,7 +122,6 @@ public class CommandFactoryExtension extends  CommandFactory {
 
         File detachedFile = new File(newVersionDir, fileToBeDetached);
         deleteFile(detachedFile);
-
         trackedManager.removeFile(fileToBeDetached);
 
         updateVersionFiles(newVersionNum, newVersionNum);
@@ -211,8 +193,6 @@ public class CommandFactoryExtension extends  CommandFactory {
             return;
         }
 
-
-        Integer activeVersionNum = getActiveVersion(gvtDir);
         Integer newVersionNum = getLastVersion(gvtDir) + 1;
         File prevVersionDir = new File(versionsDir, String.valueOf(getLastVersion(gvtDir)));
         File newVersionDir = new File(versionsDir, String.valueOf(newVersionNum));
@@ -239,16 +219,16 @@ public class CommandFactoryExtension extends  CommandFactory {
         File historyFile = new File(gvtDir, "history.txt");
 
         List<String> lines = Files.readAllLines(historyFile.toPath());
-        int limit = -1;
+        int linesToPrintNum = -1;
 
         if (args.length >= 3 && "-last".equals(args[1])) {
             try {
-                limit = Integer.parseInt(args[2]);
+                linesToPrintNum = Integer.parseInt(args[2]);
             } catch (NumberFormatException ignored) {}
         }
 
-        if (limit > 0 && limit < lines.size()) {
-            lines = lines.subList(0, limit);
+        if (linesToPrintNum > 0 && linesToPrintNum < lines.size()) {
+            lines = lines.subList(0, linesToPrintNum);
         }
 
         StringBuilder sb = new StringBuilder();
@@ -319,11 +299,6 @@ public class CommandFactoryExtension extends  CommandFactory {
         return sourceFile.exists();
     }
 
-    private boolean checkFileExistenceIn(File dir, String toAdd ){
-        File sourceFile = new File(dir, toAdd);
-        return sourceFile.exists();
-    }
-
     private void createDir(File dir) throws IOException {
         if (!dir.mkdir()) {
             throw new IOException("Failed to create directory: " + dir.getAbsolutePath());
@@ -334,17 +309,6 @@ public class CommandFactoryExtension extends  CommandFactory {
         if (!file.delete()) {
             throw new IOException("Failed to delete file: " + file.getPath());
         }
-    }
-
-    private boolean addMessageAndCheckIfItIsCustom(String[] args, File newVersionDir, Integer newVersionNum, String defaultMessage) throws IOException {
-        File message = new File(newVersionDir, "message.txt");
-        if (args.length >= 4 && "-m".equals(args[2])) {
-
-            Files.writeString(message.toPath(), "Version: " + newVersionNum + "\n" + args[3]);
-            return true;
-        }
-        Files.writeString(message.toPath(), "Version: " + newVersionNum + "\n" + defaultMessage);
-        return false;
     }
 
     private void filesCopy(File fromDir, File toDir ) throws IOException {
@@ -384,5 +348,14 @@ public class CommandFactoryExtension extends  CommandFactory {
             Files.writeString(history.toPath(), newEntry + existingHistory);
         }
     }
+    private boolean addMessageAndCheckIfItIsCustom(String[] args, File newVersionDir, Integer newVersionNum, String defaultMessage) throws IOException {
+        File message = new File(newVersionDir, "message.txt");
+        if (args.length >= 4 && "-m".equals(args[2])) {
 
+            Files.writeString(message.toPath(), "Version: " + newVersionNum + "\n" + args[3]);
+            return true;
+        }
+        Files.writeString(message.toPath(), "Version: " + newVersionNum + "\n" + defaultMessage);
+        return false;
+    }
 }
